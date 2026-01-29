@@ -1,46 +1,101 @@
-# Graph Processing System
 
-This project is a visual, interactive Java application for learning and demonstrating graph algorithms. It features a user-friendly GUI designed for beginners and is ideal for school presentations.
+# Bidirectional Search and Graph Algorithms in Java
 
-## Features
-- Visualize and run classic graph algorithms: **BFS**, **DFS**, **Dijkstra**, and **PageRank**
-- Choose from multiple sample graphs and a maze for testing
-- Step-by-step animation with adjustable speed
-- Clear instructions, tooltips, and algorithm descriptions in the interface
-- Beginner-friendly layout and controls
+## What is Bidirectional Search?
+Bidirectional Search is an efficient algorithm for finding the shortest path between two nodes in an unweighted graph. Instead of searching from the source to the target in one direction, it simultaneously searches from both the source and the target. The two searches meet in the middle, which can significantly reduce the number of nodes explored compared to a standard Breadth-First Search (BFS).
 
-## How to Use
-1. **Select a Graph:** Use the "Graph" dropdown to choose a sample graph or maze.
-2. **Select an Algorithm:** Use the "Algorithm" dropdown to pick BFS, DFS, Dijkstra, or PageRank.
-3. **Read the Description:** The right panel displays a description of the selected algorithm.
-4. **Start the Simulation:** Click **Start** to animate the algorithm step by step.
-5. **Pause/Reset:** Use **Pause** to stop the animation and **Reset** to restart with the current settings.
-6. **Adjust Speed:** Use the slider to slow down or speed up the animation for better understanding.
+## How the Algorithm Works (Step-by-Step)
+1. **Initialization**: Start two BFS traversals—one from the source node and one from the target node.
+2. **Alternate Expansion**: At each step, expand one level from the source side, then one from the target side.
+3. **Intersection Detection**: If a node is visited by both searches, the searches have met. This node is the intersection point.
+4. **Path Reconstruction**: Trace back from the intersection node to both the source and the target using parent pointers, then combine the two paths to get the full shortest path.
+5. **Edge Cases**: If the source or target does not exist, or if no path exists, the algorithm returns an empty path and prints an error message.
 
-## Algorithm Descriptions
-- **BFS (Breadth-First Search):** Explores the graph level by level, useful for finding shortest paths in unweighted graphs.
-- **DFS (Depth-First Search):** Explores as far as possible along each branch before backtracking. Useful for pathfinding and maze solving.
-- **Dijkstra:** Finds the shortest path from a starting vertex to all other vertices in a weighted graph.
-- **PageRank:** Measures the importance of each node in a graph, originally used by Google Search.
+## Implementation Design
+- **Graph Representation**: The graph is represented as an adjacency list (`Map<String, List<String>>`).
+- **BidirectionalSearch**: Contains the static method `findShortestPath` for bidirectional BFS.
+- **Other Algorithms**: Classic implementations of PageRank, Dijkstra, DFS, and a BFS-based shortest path utility are also provided for educational purposes.
+- **Edge Case Handling**: All algorithms check for null/empty graphs, missing nodes, and disconnected graphs, and provide meaningful error messages.
 
-## GUI Overview
-- **Instructions:** Shown at the bottom of the window for quick reference.
-- **Tooltips:** Hover over buttons and controls for helpful hints.
-- **Algorithm Description:** Always visible on the right for the selected algorithm.
-- **Graph Visualization:** Nodes and edges are clearly displayed and update as the algorithm runs.
+## Input Format and Example Inputs
+- **Graph**: Adjacency list, e.g.:
+	```java
+	Map<String, List<String>> graph = new HashMap<>();
+	graph.put("A", Arrays.asList("B", "C"));
+	graph.put("B", Arrays.asList("A", "D"));
+	graph.put("C", Arrays.asList("A", "D"));
+	graph.put("D", Arrays.asList("B", "C", "E"));
+	graph.put("E", Arrays.asList("D"));
+	```
+- **Source/Target**: Node labels as strings, e.g., `"A"`, `"E"`.
 
-## Folder Structure
+## Output Format and Example Outputs
+- **Output**: List of node labels representing the shortest path, e.g.:
+	```java
+	[A, B, D, E]
+	```
+- **No Path**: Returns an empty list and prints an error message.
 
-- `src/` — Java source code
-- `lib/` — Dependencies
-- `bin/` — Compiled output
+## Example Test Cases
+```java
+// Example 1: Path exists
+List<String> path = BidirectionalSearch.findShortestPath(graph, "A", "E");
+System.out.println(path); // Output: [A, B, D, E]
 
-## Getting Started
+// Example 2: Source equals target
+List<String> path2 = BidirectionalSearch.findShortestPath(graph, "A", "A");
+System.out.println(path2); // Output: [A]
 
-1. Open the project in Visual Studio Code.
-2. Build and run the application (see your Java extension documentation if needed).
-3. The GUI will launch and you can begin exploring graph algorithms interactively.
+// Example 3: No path exists
+List<String> path3 = BidirectionalSearch.findShortestPath(graph, "A", "Z");
+System.out.println(path3); // Output: [] (with error message)
+```
+
+## Time and Space Complexity Analysis
+- **Time Complexity**: O(b^(d/2)), where b is the branching factor and d is the shortest path length. This is much faster than O(b^d) for standard BFS in large graphs.
+- **Space Complexity**: O(b^(d/2)), for storing visited nodes and parent pointers from both directions.
+
+## How Invalid Inputs and Edge Cases are Handled
+- **Null or Empty Graph**: Returns empty path, prints error.
+- **Missing Source/Target**: Returns empty path, prints error.
+- **Source Equals Target**: Returns a single-node path.
+- **No Path Exists**: Returns empty path, prints error.
+
+## How to Compile and Run the Program
+1. **Compile**:
+	 ```sh
+	 javac -d bin src/algorithm/*.java
+	 ```
+2. **Run**:
+	 Create a test class (e.g., `TestBidirectionalSearch.java`) in the `src` folder:
+	 ```java
+	 import algorithm.BidirectionalSearch;
+	 import java.util.*;
+
+	 public class TestBidirectionalSearch {
+			 public static void main(String[] args) {
+					 Map<String, List<String>> graph = new HashMap<>();
+					 graph.put("A", Arrays.asList("B", "C"));
+					 graph.put("B", Arrays.asList("A", "D"));
+					 graph.put("C", Arrays.asList("A", "D"));
+					 graph.put("D", Arrays.asList("B", "C", "E"));
+					 graph.put("E", Arrays.asList("D"));
+					 System.out.println(BidirectionalSearch.findShortestPath(graph, "A", "E"));
+			 }
+	 }
+	 ```
+	 Compile and run:
+	 ```sh
+	 javac -d bin src/TestBidirectionalSearch.java
+	 java -cp bin TestBidirectionalSearch
+	 ```
+
+## Additional Algorithms Included
+- **PageRankAlgorithm**: Computes PageRank scores for all nodes.
+- **DijkstraAlgorithm**: Finds shortest paths in weighted graphs.
+- **DFSAlgorithm**: Performs depth-first traversal.
+- **ShortestPath**: Utility for BFS-based shortest path in unweighted graphs.
 
 ---
 
-This project is designed for educational purposes and is perfect for classroom demonstrations or self-study.
+For questions or improvements, see the code comments for guidance. All algorithms are designed for clarity and educational value.

@@ -10,43 +10,63 @@ import model.*;
 import engine.*;
 import java.util.*;
 
+import algorithm.BFSStateMachine;
+
 public class GraphView extends Pane {
     private Graph graph;
-    private GraphProcessingEngine engine;
-    private int speed = 500;
-    private Timeline timeline;
+    private BFSStateMachine bfs;
     private final Map<Integer, Circle> vertexNodes = new HashMap<>();
     private final Map<Integer, Text> vertexLabels = new HashMap<>();
     private final List<Line> edgeLines = new ArrayList<>();
     private final double RADIUS = 32;
     private final double CENTER_X = 500, CENTER_Y = 350, CIRCLE_RADIUS = 260;
 
-    public GraphView(Graph graph, GraphProcessingEngine engine) {
+    public GraphView(Graph graph) {
         setPrefSize(1000, 700);
         setStyle("-fx-background-color: #18191c;");
-        setGraphAndEngine(graph, engine);
+        setGraph(graph);
     }
 
-    public void setGraphAndEngine(Graph graph, GraphProcessingEngine engine) {
+    public void setGraph(Graph graph) {
         this.graph = graph;
-        this.engine = engine;
         drawGraph();
     }
 
-    public void setSpeed(int speed) { this.speed = speed; if (timeline != null) timeline.setRate(500.0 / speed); }
-
-    public void startAnimation() {
-        if (timeline != null) timeline.stop();
-        timeline = new Timeline(new KeyFrame(javafx.util.Duration.millis(speed), e -> {
-            engine.step();
-            updateGraph();
-        }));
-        timeline.setCycleCount(Animation.INDEFINITE);
-        timeline.play();
+    public void setBFSStateMachine(BFSStateMachine bfs) {
+        this.bfs = bfs;
+        updateBFSHighlight();
     }
 
-    public void pauseAnimation() { if (timeline != null) timeline.pause(); }
-    public void reset() { drawGraph(); }
+    public void updateBFSHighlight() {
+        drawGraph();
+        if (bfs == null) return;
+        // Highlight visited nodes
+        for (Integer id : bfs.getVisited()) {
+            Circle c = vertexNodes.get(id);
+            if (c != null) {
+                c.setFill(Color.web("#e0c28c"));
+                c.setEffect(new javafx.scene.effect.DropShadow(32, Color.web("#ffe7b0")));
+            }
+        }
+        // Highlight current node
+        Integer curr = bfs.getCurrent();
+        if (curr != null) {
+            Circle c = vertexNodes.get(curr);
+            if (c != null) {
+                c.setFill(Color.web("#fff2c2"));
+                c.setEffect(new javafx.scene.effect.DropShadow(48, Color.web("#fff2c2")));
+            }
+        }
+        // Optionally highlight queue nodes differently
+        for (Integer id : bfs.getQueue()) {
+            if (id.equals(bfs.getCurrent())) continue;
+            Circle c = vertexNodes.get(id);
+            if (c != null) {
+                c.setFill(Color.web("#bfa76a"));
+                c.setEffect(new javafx.scene.effect.DropShadow(32, Color.web("#e0c28c")));
+            }
+        }
+    }
 
     private void drawGraph() {
         getChildren().clear();
@@ -64,7 +84,6 @@ public class GraphView extends Pane {
             circle.setStroke(Color.web("#e0c28c"));
             circle.setStrokeWidth(3);
             circle.setEffect(new javafx.scene.effect.DropShadow(18, Color.web("#e0c28c")));
-            // Use single-letter labels (A, B, ...)
             String labelStr = String.valueOf((char)('A' + v.getId()));
             Text label = new Text(x - 10, y + 5, labelStr);
             label.setFill(Color.web("#e0c28c"));
@@ -82,22 +101,6 @@ public class GraphView extends Pane {
                 line.setStrokeWidth(2.5);
                 edgeLines.add(line);
                 getChildren().add(0, line);
-            }
-        }
-    }
-
-    private void updateGraph() {
-        for (Vertex v : graph.getVertices()) {
-            Circle circle = vertexNodes.get(v.getId());
-            if (circle != null) {
-                // Highlight active node with glow
-                if (v.isActive()) {
-                    circle.setFill(Color.web("#e0c28c"));
-                    circle.setEffect(new javafx.scene.effect.DropShadow(32, Color.web("#ffe7b0")));
-                } else {
-                    circle.setFill(Color.web("#23242a"));
-                    circle.setEffect(new javafx.scene.effect.DropShadow(18, Color.web("#e0c28c")));
-                }
             }
         }
     }

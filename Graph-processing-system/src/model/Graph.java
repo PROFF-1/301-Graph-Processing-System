@@ -15,6 +15,18 @@ public class Graph {
         edges.add(new Edge(from, to));
         vertices.get(from).addNeighbor(to);
     }
+    public void removeVertex(int id) {
+        vertices.remove(id);
+        edges.removeIf(e -> e.getFrom() == id || e.getTo() == id);
+        for (Vertex v : vertices.values()) {
+            v.getNeighbors().removeIf(n -> n == id);
+        }
+    }
+    public void removeEdge(int from, int to) {
+        edges.removeIf(e -> e.getFrom() == from && e.getTo() == to);
+        Vertex v = vertices.get(from);
+        if (v != null) v.getNeighbors().removeIf(n -> n == to);
+    }
     public Vertex getVertex(int id) { return vertices.get(id); }
     public Collection<Vertex> getVertices() { return vertices.values(); }
     public List<Edge> getEdges() { return edges; }

@@ -1,0 +1,261 @@
+import React from 'react';
+import { Graph, NodeState, EdgeState } from '@/types/graph';
+
+interface GraphCanvasProps {
+  graph: Graph;
+  nodeStates: Map<string, NodeState>;
+  edgeStates: Map<string, EdgeState>;
+  selectedSource: string | null;
+  selectedTarget: string | null;
+  onNodeClick: (nodeId: string) => void;
+  pageRankValues?: Map<string, number>;
+  distances?: Map<string, number>;
+}
+
+const nodeColors: Record<NodeState, string> = {
+  'default': 'hsl(var(--node-default))',
+  'source': 'hsl(var(--node-source))',
+  'target': 'hsl(var(--node-target))',
+  'visiting': 'hsl(var(--node-current))',
+  'visited': 'hsl(var(--node-visited))',
+  'path': 'hsl(var(--node-path))',
+  'forward-frontier': 'hsl(173 80% 50%)',
+  'backward-frontier': 'hsl(339 90% 60%)',
+};
+
+const edgeColors: Record<EdgeState, string> = {
+  'default': 'hsl(var(--edge-default))',
+  'exploring': 'hsl(var(--edge-exploring))',
+  'path': 'hsl(var(--edge-path))',
+  'visited': 'hsl(var(--node-visited))',
+};
+
+export const GraphCanvas: React.FC<GraphCanvasProps> = ({
+  graph,
+  nodeStates,
+  edgeStates,
+  selectedSource,
+  selectedTarget,
+  onNodeClick,
+  pageRankValues,
+  distances,
+}) => {
+  const getEdgeKey = (source: string, target: string) => `${source}-${target}`;
+  
+  const getEdgeState = (source: string, target: string): EdgeState => {
+    const key1 = getEdgeKey(source, target);
+    const key2 = getEdgeKey(target, source);
+    return edgeStates.get(key1) || edgeStates.get(key2) || 'default';
+  };
+
+  const getNodeState = (nodeId: string): NodeState => {
+    if (nodeId === selectedSource) return 'source';
+    if (nodeId === selectedTarget) return 'target';
+    return nodeStates.get(nodeId) || 'default';
+  };
+
+  // Calculate node radius based on PageRank if available
+  const getNodeRadius = (nodeId: string) => {
+    if (!pageRankValues || pageRankValues.size === 0) return 28;
+    const rank = pageRankValues.get(nodeId) || 0;
+    const maxRank = Math.max(...Array.from(pageRankValues.values()));
+    const minRadius = 20;
+    const maxRadius = 45;
+    return minRadius + (rank / maxRank) * (maxRadius - minRadius);
+  };
+
+  return (
+    <svg 
+      className="w-full h-full bg-background rounded-lg"
+      viewBox="0 0 650 500"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* Glow filter definitions */}
+      <defs>
+        <filter id="glow-source" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <filter id="glow-target" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <filter id="glow-path" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        {/* Arrow marker for directed graphs */}
+        <marker
+          id="arrowhead"
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon
+            points="0 0, 10 3.5, 0 7"
+            fill="hsl(var(--edge-default))"
+          />
+        </marker>
+        <marker
+          id="arrowhead-path"
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon
+            points="0 0, 10 3.5, 0 7"
+            fill="hsl(var(--edge-path))"
+          />
+        </marker>
+      </defs>
+
+      {/* Draw edges first (behind nodes) */}
+      {graph.edges.map((edge, index) => {
+        const sourceNode = graph.nodes.find(n => n.id === edge.source);
+        const targetNode = graph.nodes.find(n => n.id === edge.target);
+        if (!sourceNode || !targetNode) return null;
+
+        const state = getEdgeState(edge.source, edge.target);
+        const color = edgeColors[state];
+        const strokeWidth = state === 'path' ? 4 : state === 'exploring' ? 3 : 2;
+        
+        // Calculate midpoint for weight label
+        const midX = (sourceNode.x + targetNode.x) / 2;
+        const midY = (sourceNode.y + targetNode.y) / 2;
+
+        // Calculate shortened line for arrow (so it doesn't overlap node)
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const targetRadius = getNodeRadius(edge.target);
+        const shortenedLength = length - targetRadius - 5;
+        const endX = sourceNode.x + (dx / length) * shortenedLength;
+        const endY = sourceNode.y + (dy / length) * shortenedLength;
+
+        return (
+          <g key={`edge-${index}`}>
+            <line
+              x1={sourceNode.x}
+              y1={sourceNode.y}
+              x2={graph.directed ? endX : targetNode.x}
+              y2={graph.directed ? endY : targetNode.y}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              markerEnd={graph.directed ? (state === 'path' ? 'url(#arrowhead-path)' : 'url(#arrowhead)') : undefined}
+              className={state === 'path' ? 'animate-path-trace' : ''}
+              filter={state === 'path' ? 'url(#glow-path)' : undefined}
+            />
+            {edge.weight !== undefined && (
+              <g>
+                <rect
+                  x={midX - 12}
+                  y={midY - 10}
+                  width={24}
+                  height={20}
+                  fill="hsl(var(--background))"
+                  rx={4}
+                />
+                <text
+                  x={midX}
+                  y={midY + 4}
+                  textAnchor="middle"
+                  className="fill-muted-foreground text-xs font-mono"
+                >
+                  {edge.weight}
+                </text>
+              </g>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Draw nodes */}
+      {graph.nodes.map((node) => {
+        const state = getNodeState(node.id);
+        const color = nodeColors[state];
+        const radius = getNodeRadius(node.id);
+        const isGlowing = state === 'source' || state === 'target' || state === 'path' || state === 'visiting';
+        const distance = distances?.get(node.id);
+        const pageRank = pageRankValues?.get(node.id);
+
+        return (
+          <g 
+            key={node.id} 
+            onClick={() => onNodeClick(node.id)}
+            className="cursor-pointer transition-transform hover:scale-110"
+          >
+            {/* Node circle */}
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={radius}
+              fill={color}
+              stroke={state === 'visiting' ? 'hsl(var(--foreground))' : 'transparent'}
+              strokeWidth={3}
+              filter={isGlowing ? `url(#glow-${state === 'source' ? 'source' : state === 'target' ? 'target' : 'path'})` : undefined}
+              className={state === 'visiting' ? 'animate-node-visit' : ''}
+            />
+            
+            {/* Node label */}
+            <text
+              x={node.x}
+              y={node.y + 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-foreground font-semibold text-sm pointer-events-none select-none"
+              style={{ fontSize: radius > 35 ? '14px' : '12px' }}
+            >
+              {node.label}
+            </text>
+
+            {/* Distance or PageRank indicator */}
+            {distance !== undefined && distance !== Infinity && (
+              <g>
+                <circle
+                  cx={node.x + radius * 0.7}
+                  cy={node.y - radius * 0.7}
+                  r={12}
+                  fill="hsl(var(--primary))"
+                />
+                <text
+                  x={node.x + radius * 0.7}
+                  y={node.y - radius * 0.7 + 1}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="fill-primary-foreground font-mono text-xs pointer-events-none"
+                >
+                  {distance}
+                </text>
+              </g>
+            )}
+            
+            {pageRank !== undefined && (
+              <text
+                x={node.x}
+                y={node.y + radius + 16}
+                textAnchor="middle"
+                className="fill-muted-foreground font-mono text-xs"
+              >
+                {pageRank.toFixed(3)}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+};

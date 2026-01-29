@@ -26,7 +26,7 @@ public class ControlsPane extends VBox {
     public ComboBox<String> algoBox = new ComboBox<>();
     public ComboBox<String> graphBox = new ComboBox<>();
     // Control buttons
-    public Button runBtn = new Button("Run BFS");
+    public Button runBtn = new Button("Run");
     public Button pauseBtn = new Button("Pause");
     public Button resetBtn = new Button("Reset");
     public Slider speedSlider = new Slider(100, 2000, 500);
@@ -86,7 +86,7 @@ public class ControlsPane extends VBox {
         logArea.setEditable(false);
         logArea.setPrefRowCount(10);
         logArea.setStyle("-fx-control-inner-background: #f8f5e3; -fx-font-family: 'Consolas'; -fx-background-radius: 8; -fx-border-color: #e0c28c; -fx-border-width: 2; -fx-border-radius: 8;");
-        Label logLabel = new Label("BFS Log:");
+        Label logLabel = new Label("Log:");
         logLabel.setStyle("-fx-text-fill: #e0c28c; -fx-font-weight: bold; -fx-font-size: 16px;");
         VBox logBox = new VBox(logLabel, logArea);
         logBox.setStyle("-fx-padding: 4; -fx-background-color: #23242a; -fx-border-color: #e0c28c; -fx-border-radius: 8; -fx-background-radius: 8;");
