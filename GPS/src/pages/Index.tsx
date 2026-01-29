@@ -42,6 +42,7 @@ const Index = () => {
     stepBackward,
     reset,
     setSpeed,
+    steps // <-- Add this line if your hook returns steps
   } = useAlgorithmVisualizer({
     graph,
     source: selectedSource,
@@ -197,6 +198,18 @@ const Index = () => {
 
             {/* Algorithm Explanations Section */}
             <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
+
+            {/* Algorithm Log Section */}
+            <div className="max-w-4xl mx-auto mt-8 mb-8 p-6 bg-card border border-border rounded-xl shadow text-base text-foreground">
+              <h2 className="text-lg font-bold mb-2">Algorithm Log</h2>
+              <ol className="list-decimal ml-6 mt-3 space-y-1">
+                {(steps ?? []).map((step, i) => (
+                  <li key={i} className={i === currentStep ? 'font-bold text-primary' : ''}>
+                    {step.message}
+                  </li>
+                ))}
+              </ol>
+            </div>
           </TabsContent>
 
           <TabsContent value="code">
