@@ -18,11 +18,12 @@ public class GraphView extends Pane {
     private final Map<Integer, Circle> vertexNodes = new HashMap<>();
     private final Map<Integer, Text> vertexLabels = new HashMap<>();
     private final List<Line> edgeLines = new ArrayList<>();
-    private final double RADIUS = 25;
-    private final double CENTER_X = 400, CENTER_Y = 300, CIRCLE_RADIUS = 200;
+    private final double RADIUS = 32;
+    private final double CENTER_X = 500, CENTER_Y = 350, CIRCLE_RADIUS = 260;
 
     public GraphView(Graph graph, GraphProcessingEngine engine) {
-        setPrefSize(900, 600);
+        setPrefSize(1000, 700);
+        setStyle("-fx-background-color: #18191c;");
         setGraphAndEngine(graph, engine);
     }
 
@@ -59,9 +60,15 @@ public class GraphView extends Pane {
             double x = CENTER_X + CIRCLE_RADIUS * Math.cos(angle);
             double y = CENTER_Y + CIRCLE_RADIUS * Math.sin(angle);
             Vertex v = vertices.get(i);
-            Circle circle = new Circle(x, y, RADIUS, Color.LIGHTBLUE);
-            circle.setStroke(Color.DARKBLUE);
-            Text label = new Text(x - 10, y + 5, String.valueOf(v.getId()));
+            Circle circle = new Circle(x, y, RADIUS, Color.web("#23242a"));
+            circle.setStroke(Color.web("#e0c28c"));
+            circle.setStrokeWidth(3);
+            circle.setEffect(new javafx.scene.effect.DropShadow(18, Color.web("#e0c28c")));
+            // Use single-letter labels (A, B, ...)
+            String labelStr = String.valueOf((char)('A' + v.getId()));
+            Text label = new Text(x - 10, y + 5, labelStr);
+            label.setFill(Color.web("#e0c28c"));
+            label.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
             vertexNodes.put(v.getId(), circle);
             vertexLabels.put(v.getId(), label);
             getChildren().addAll(circle, label);
@@ -71,7 +78,8 @@ public class GraphView extends Pane {
             Circle to = vertexNodes.get(e.getTo());
             if (from != null && to != null) {
                 Line line = new Line(from.getCenterX(), from.getCenterY(), to.getCenterX(), to.getCenterY());
-                line.setStroke(Color.GRAY);
+                line.setStroke(Color.web("#e0c28c"));
+                line.setStrokeWidth(2.5);
                 edgeLines.add(line);
                 getChildren().add(0, line);
             }
@@ -82,12 +90,14 @@ public class GraphView extends Pane {
         for (Vertex v : graph.getVertices()) {
             Circle circle = vertexNodes.get(v.getId());
             if (circle != null) {
-                if (v.isActive()) circle.setFill(Color.LIGHTGREEN);
-                else circle.setFill(Color.LIGHTBLUE);
-            }
-            Text label = vertexLabels.get(v.getId());
-            if (label != null) {
-                label.setText(v.getId() + "\n" + String.format("%.2f", v.getValue()));
+                // Highlight active node with glow
+                if (v.isActive()) {
+                    circle.setFill(Color.web("#e0c28c"));
+                    circle.setEffect(new javafx.scene.effect.DropShadow(32, Color.web("#ffe7b0")));
+                } else {
+                    circle.setFill(Color.web("#23242a"));
+                    circle.setEffect(new javafx.scene.effect.DropShadow(18, Color.web("#e0c28c")));
+                }
             }
         }
     }

@@ -26,9 +26,10 @@ public class GraphController {
         rootPane.setCenter(graphView);
         setupRightPane();
         rootPane.setRight(rightPane);
-        rootPane.setBottom(controls);
+        rootPane.setLeft(controls);
         setupListeners();
         updateAlgorithmDescription();
+        updateNodeAndEdgeBoxes();
     }
 
     private void setupRightPane() {
@@ -40,15 +41,73 @@ public class GraphController {
     }
 
     private void setupListeners() {
-        controls.startBtn.setOnAction(e -> startSimulation());
+        controls.runBtn.setOnAction(e -> startSimulation());
         controls.pauseBtn.setOnAction(e -> pauseSimulation());
         controls.resetBtn.setOnAction(e -> resetSimulation());
         controls.algoBox.setOnAction(e -> switchAlgorithm());
         controls.graphBox.setOnAction(e -> switchGraph());
         controls.speedSlider.valueProperty().addListener((obs, oldVal, newVal) -> graphView.setSpeed(newVal.intValue()));
+
+        controls.addNodeBtn.setOnAction(e -> {
+            String name = controls.nodeNameField.getText();
+            if (name != null && !name.isEmpty()) {
+                try {
+                    int id = Integer.parseInt(name);
+                    graph.addVertex(id);
+                    updateNodeAndEdgeBoxes();
+                    controls.nodeNameField.clear();
+                } catch (NumberFormatException ex) {
+                    // Optionally show error
+                }
+            }
+        });
+        controls.removeNodeBtn.setOnAction(e -> {
+            String name = controls.nodeNameField.getText();
+            if (name != null && !name.isEmpty()) {
+                try {
+                    int id = Integer.parseInt(name);
+                    // Remove vertex and all edges
+                    // (You may want to implement this in Graph)
+                    updateNodeAndEdgeBoxes();
+                    controls.nodeNameField.clear();
+                } catch (NumberFormatException ex) {
+                    // Optionally show error
+                }
+            }
+        });
+        controls.addEdgeBtn.setOnAction(e -> {
+            try {
+                int from = Integer.parseInt(controls.edgeFromField.getText());
+                int to = Integer.parseInt(controls.edgeToField.getText());
+                graph.addEdge(from, to);
+                updateNodeAndEdgeBoxes();
+                controls.edgeFromField.clear();
+                controls.edgeToField.clear();
+            } catch (NumberFormatException ex) {
+                // Optionally show error
+            }
+        });
+        controls.removeEdgeBtn.setOnAction(e -> {
+            // Implement edge removal if needed
+            controls.edgeFromField.clear();
+            controls.edgeToField.clear();
+        });
+        controls.sourceBox.setOnAction(e -> {
+            String val = controls.sourceBox.getValue();
+            if (val != null) {
+                try { sourceId = Integer.parseInt(val); } catch (NumberFormatException ex) {}
+            }
+        });
+        controls.destBox.setOnAction(e -> {
+            // Optionally use destination for path algorithms
+        });
     }
 
-    private void startSimulation() { graphView.startAnimation(); }
+    private void startSimulation() {
+        controls.logArea.clear();
+        graphView.startAnimation();
+        // Optionally log steps
+    }
     private void pauseSimulation() { graphView.pauseAnimation(); }
 
     private void resetSimulation() {
@@ -58,6 +117,8 @@ public class GraphController {
         graphView.setGraphAndEngine(graph, engine);
         graphView.reset();
         updateAlgorithmDescription();
+        updateNodeAndEdgeBoxes();
+        controls.logArea.clear();
     }
 
     private void switchAlgorithm() { resetSimulation(); }
@@ -96,6 +157,18 @@ public class GraphController {
                 break;
         }
         algoDescriptionLabel.setText(desc);
+    }
+
+    private void updateNodeAndEdgeBoxes() {
+        controls.sourceBox.getItems().clear();
+        controls.destBox.getItems().clear();
+        for (Vertex v : graph.getVertices()) {
+            String id = String.valueOf(v.getId());
+            controls.sourceBox.getItems().add(id);
+            controls.destBox.getItems().add(id);
+        }
+        if (!controls.sourceBox.getItems().isEmpty()) controls.sourceBox.setValue(controls.sourceBox.getItems().get(0));
+        if (!controls.destBox.getItems().isEmpty()) controls.destBox.setValue(controls.destBox.getItems().get(0));
     }
 
     public BorderPane getRootPane() { return rootPane; }

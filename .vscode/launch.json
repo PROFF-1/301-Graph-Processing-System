@@ -6,6 +6,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "GraphApp",
+      "request": "launch",
+      "mainClass": "gui.GraphApp",
+      "projectName": "301-Graph-Processing-System_4d83219d"
+    },
+    {
+      "type": "java",
       "name": "App",
       "request": "launch",
       "mainClass": "App",
