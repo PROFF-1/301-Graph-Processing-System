@@ -76,6 +76,11 @@ const Index = () => {
     }
   }, []);
 
+  const handleRunAndPlay = () => {
+    runAlgorithm();
+    setTimeout(() => play(), 0); // Ensure play runs after steps are set
+  };
+
   return (
     <div className="min-h-screen bg-gradient-surface">
       {/* Header */}
@@ -129,7 +134,7 @@ const Index = () => {
                 <AlgorithmSelector
                   selectedAlgorithm={selectedAlgorithm}
                   onAlgorithmChange={handleAlgorithmChange}
-                  onRun={runAlgorithm}
+                  onRun={handleRunAndPlay}
                   selectedSource={selectedSource}
                   selectedTarget={selectedTarget}
                   isRunning={isPlaying}
@@ -166,7 +171,7 @@ const Index = () => {
                     />
                   </div>
                   
-                  <div className="aspect-[4/3] w-full bg-background rounded-lg border border-border overflow-hidden">
+                  <div className="aspect-[7/3] w-full bg-background rounded-lg border border-border overflow-hidden">
                     <GraphCanvas
                       graph={graph}
                       nodeStates={currentStepData.nodeStates}
@@ -192,24 +197,24 @@ const Index = () => {
                     <span>•</span>
                     <span>Use controls to step through the algorithm</span>
                   </div>
+
+                  {/* Algorithm Log Section - moved here */}
+                  <div className="mt-6 p-4 bg-card border border-border rounded-xl shadow text-base text-foreground">
+                    <h2 className="text-lg font-bold mb-2">Algorithm Log</h2>
+                    <ol className="list-decimal ml-6 mt-3 space-y-1">
+                      {(steps ?? []).map((step, i) => (
+                        <li key={i} className={i === currentStep ? 'font-bold text-primary' : ''}>
+                          {step.message}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Algorithm Explanations Section */}
             <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
-
-            {/* Algorithm Log Section */}
-            <div className="max-w-4xl mx-auto mt-8 mb-8 p-6 bg-card border border-border rounded-xl shadow text-base text-foreground">
-              <h2 className="text-lg font-bold mb-2">Algorithm Log</h2>
-              <ol className="list-decimal ml-6 mt-3 space-y-1">
-                {(steps ?? []).map((step, i) => (
-                  <li key={i} className={i === currentStep ? 'font-bold text-primary' : ''}>
-                    {step.message}
-                  </li>
-                ))}
-              </ol>
-            </div>
           </TabsContent>
 
           <TabsContent value="code">
