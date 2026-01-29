@@ -16,6 +16,7 @@ import {
   Sparkles,
   Github
 } from 'lucide-react';
+import AlgorithmExplanations from '@/components/AlgorithmExplanations';
 
 const Index = () => {
   // Graph state
@@ -193,6 +194,9 @@ const Index = () => {
                 </div>
               </div>
             </div>
+
+            {/* Algorithm Explanations Section */}
+            <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
           </TabsContent>
 
           <TabsContent value="code">
@@ -226,3 +230,5 @@ const Index = () => {
 };
 
 export default Index;
+
+
