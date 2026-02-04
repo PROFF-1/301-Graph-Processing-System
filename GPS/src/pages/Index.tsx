@@ -594,7 +594,12 @@ const Index = () => {
                     {/* Algorithm 1 Stats */}
                     <div className={`${isComparisonMode ? 'col-span-1' : 'col-span-1'}`}>
                       <div className="space-y-4">
-                        <MetricsPanel result={useAlgorithmVisualizer({ graph, source: selectedSource, target: selectedTarget, algorithm: selectedAlgorithm, config: algoConfig }).result} algorithmName={selectedAlgorithm} />
+                        {/* Show metrics only after algorithm is done running */}
+                        {!isPlaying && result && result.metrics ? (
+                          <MetricsPanel result={result} algorithmName={selectedAlgorithm} />
+                        ) : (
+                          <MetricsPanel result={null} algorithmName={selectedAlgorithm} />
+                        )}
 
                         <div className="p-4 bg-card border border-border rounded-xl shadow text-base text-foreground max-h-[400px] overflow-y-auto">
                           <h2 className="text-lg font-bold mb-2 sticky top-0 bg-card z-10">Log: {selectedAlgorithm}</h2>

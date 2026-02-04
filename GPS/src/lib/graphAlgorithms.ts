@@ -264,6 +264,8 @@ export function dijkstra(
   sourceId: string,
   targetId: string
 ): AlgorithmResult {
+  const startTime = performance.now();
+  let relaxedEdges = 0;
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
@@ -395,7 +397,7 @@ export function dijkstra(
       if (newDist < distances.get(neighbor)!) {
         distances.set(neighbor, newDist);
         previous.set(neighbor, current);
-
+        relaxedEdges++;
         steps.push(createStep(
           nodeStates,
           edgeStates,
@@ -411,18 +413,19 @@ export function dijkstra(
   }
 
   steps.push(createStep(nodeStates, edgeStates, '❌ Target not reachable'));
-  return {
-    steps,
-    path: [],
-    found: false,
-    metrics: {
-      timeComplexity: 'O(E + V log V)',
-      spaceComplexity: 'O(V)',
-      visitedNodes: distances.size - unvisited.size,
-      visitedEdges: 0
-    }
-  };
-}
+      const endTime = performance.now();
+      return {
+        steps,
+        path,
+        found: true,
+        metrics: {
+          timeComplexity: `${(endTime - startTime).toFixed(2)} ms`,
+          spaceComplexity: `${(Object.keys(distances).length + Object.keys(previous).length)} map entries`,
+          visitedNodes: distances.size - unvisited.size + 1,
+          visitedEdges: relaxedEdges,
+          pathLength: distances.get(targetId)
+        }
+      };
 
 /**
  * DEPTH-FIRST SEARCH (DFS)
