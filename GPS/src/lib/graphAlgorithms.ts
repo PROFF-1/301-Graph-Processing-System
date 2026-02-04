@@ -1,24 +1,24 @@
 // Graph Algorithm Implementations
 // These algorithms power the visualization and mirror the Java implementation
 
-import { 
-  Graph, 
-  GraphEdge, 
-  AlgorithmStep, 
-  AlgorithmResult, 
-  NodeState, 
-  EdgeState 
+import {
+  Graph,
+  GraphEdge,
+  AlgorithmStep,
+  AlgorithmResult,
+  NodeState,
+  EdgeState
 } from '@/types/graph';
 
 // Helper to create adjacency list from graph
 function buildAdjacencyList(graph: Graph): Map<string, string[]> {
   const adjList = new Map<string, string[]>();
-  
+
   // Initialize all nodes
   for (const node of graph.nodes) {
     adjList.set(node.id, []);
   }
-  
+
   // Add edges
   for (const edge of graph.edges) {
     adjList.get(edge.source)?.push(edge.target);
@@ -26,13 +26,19 @@ function buildAdjacencyList(graph: Graph): Map<string, string[]> {
       adjList.get(edge.target)?.push(edge.source);
     }
   }
-  
+
   return adjList;
 }
 
 // Helper to get edge key
 function getEdgeKey(source: string, target: string): string {
   return `${source}-${target}`;
+}
+
+// Helper to get node label
+function getLabel(graph: Graph, nodeId: string): string {
+  const node = graph.nodes.find(n => n.id === nodeId);
+  return node ? node.label : nodeId;
 }
 
 // Helper to create a step snapshot
@@ -63,7 +69,7 @@ export function bidirectionalBFS(
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
-  
+
   // Initialize states
   graph.nodes.forEach(n => nodeStates.set(n.id, 'default'));
   graph.edges.forEach(e => {
@@ -87,22 +93,22 @@ export function bidirectionalBFS(
   }
 
   const adjList = buildAdjacencyList(graph);
-  
+
   // Forward search (from source)
   const forwardQueue: string[] = [sourceId];
   const forwardVisited = new Map<string, string | null>([[sourceId, null]]);
-  
+
   // Backward search (from target)
   const backwardQueue: string[] = [targetId];
   const backwardVisited = new Map<string, string | null>([[targetId, null]]);
-  
+
   nodeStates.set(sourceId, 'source');
   nodeStates.set(targetId, 'target');
-  
+
   steps.push(createStep(
-    nodeStates, 
-    edgeStates, 
-    `Starting bidirectional BFS from '${sourceId}' (cyan) and '${targetId}' (pink)`,
+    nodeStates,
+    edgeStates,
+    `Starting bidirectional BFS from '${getLabel(graph, sourceId)}' (cyan) and '${getLabel(graph, targetId)}' (pink)`,
     { forwardFrontier: [sourceId], backwardFrontier: [targetId] }
   ));
 
@@ -113,25 +119,25 @@ export function bidirectionalBFS(
     const forwardSize = forwardQueue.length;
     for (let i = 0; i < forwardSize && !meetingNode; i++) {
       const current = forwardQueue.shift()!;
-      
+
       if (nodeStates.get(current) !== 'source') {
         nodeStates.set(current, 'forward-frontier');
       }
-      
+
       for (const neighbor of adjList.get(current) || []) {
         const edgeKey = getEdgeKey(current, neighbor);
-        
+
         if (!forwardVisited.has(neighbor)) {
           forwardVisited.set(neighbor, current);
           forwardQueue.push(neighbor);
           edgeStates.set(edgeKey, 'exploring');
-          
+
           // Check if we met the backward search
           if (backwardVisited.has(neighbor)) {
             meetingNode = neighbor;
             steps.push(createStep(
-              nodeStates, 
-              edgeStates, 
+              nodeStates,
+              edgeStates,
               `🎯 Searches meet at node '${neighbor}'!`,
               { forwardFrontier: [...forwardQueue], backwardFrontier: [...backwardQueue] }
             ));
@@ -140,13 +146,13 @@ export function bidirectionalBFS(
         }
       }
     }
-    
+
     if (meetingNode) break;
-    
+
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `Forward frontier expanded. Queue: [${forwardQueue.join(', ')}]`,
+      nodeStates,
+      edgeStates,
+      `Forward frontier expanded. Queue: [${forwardQueue.map(id => getLabel(graph, id)).join(', ')}]`,
       { forwardFrontier: [...forwardQueue], backwardFrontier: [...backwardQueue] }
     ));
 
@@ -154,25 +160,25 @@ export function bidirectionalBFS(
     const backwardSize = backwardQueue.length;
     for (let i = 0; i < backwardSize && !meetingNode; i++) {
       const current = backwardQueue.shift()!;
-      
+
       if (nodeStates.get(current) !== 'target') {
         nodeStates.set(current, 'backward-frontier');
       }
-      
+
       for (const neighbor of adjList.get(current) || []) {
         const edgeKey = getEdgeKey(current, neighbor);
-        
+
         if (!backwardVisited.has(neighbor)) {
           backwardVisited.set(neighbor, current);
           backwardQueue.push(neighbor);
           edgeStates.set(edgeKey, 'exploring');
-          
+
           // Check if we met the forward search
           if (forwardVisited.has(neighbor)) {
             meetingNode = neighbor;
             steps.push(createStep(
-              nodeStates, 
-              edgeStates, 
+              nodeStates,
+              edgeStates,
               `🎯 Searches meet at node '${neighbor}'!`,
               { forwardFrontier: [...forwardQueue], backwardFrontier: [...backwardQueue] }
             ));
@@ -181,13 +187,13 @@ export function bidirectionalBFS(
         }
       }
     }
-    
+
     if (meetingNode) break;
-    
+
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `Backward frontier expanded. Queue: [${backwardQueue.join(', ')}]`,
+      nodeStates,
+      edgeStates,
+      `Backward frontier expanded. Queue: [${backwardQueue.map(id => getLabel(graph, id)).join(', ')}]`,
       { forwardFrontier: [...forwardQueue], backwardFrontier: [...backwardQueue] }
     ));
   }
@@ -199,7 +205,7 @@ export function bidirectionalBFS(
 
   // Reconstruct path
   const path: string[] = [];
-  
+
   // Forward path (source to meeting)
   let node: string | null = meetingNode;
   const forwardPath: string[] = [];
@@ -207,7 +213,7 @@ export function bidirectionalBFS(
     forwardPath.unshift(node);
     node = forwardVisited.get(node) || null;
   }
-  
+
   // Backward path (meeting to target)
   node = backwardVisited.get(meetingNode) || null;
   const backwardPath: string[] = [];
@@ -215,9 +221,9 @@ export function bidirectionalBFS(
     backwardPath.push(node);
     node = backwardVisited.get(node) || null;
   }
-  
+
   path.push(...forwardPath, ...backwardPath);
-  
+
   // Mark final path
   for (const nodeId of path) {
     nodeStates.set(nodeId, 'path');
@@ -228,11 +234,11 @@ export function bidirectionalBFS(
       edgeStates.set(getEdgeKey(path[i + 1], path[i]), 'path');
     }
   }
-  
+
   steps.push(createStep(
-    nodeStates, 
-    edgeStates, 
-    `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.join(' → ')}`
+    nodeStates,
+    edgeStates,
+    `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
   ));
 
   return { steps, path, found: true };
@@ -250,7 +256,7 @@ export function dijkstra(
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
-  
+
   // Initialize
   graph.nodes.forEach(n => nodeStates.set(n.id, 'default'));
   graph.edges.forEach(e => {
@@ -282,7 +288,7 @@ export function dijkstra(
   const distances = new Map<string, number>();
   const previous = new Map<string, string | null>();
   const unvisited = new Set<string>();
-  
+
   graph.nodes.forEach(n => {
     distances.set(n.id, n.id === sourceId ? 0 : Infinity);
     previous.set(n.id, null);
@@ -291,11 +297,11 @@ export function dijkstra(
 
   nodeStates.set(sourceId, 'source');
   nodeStates.set(targetId, 'target');
-  
+
   steps.push(createStep(
-    nodeStates, 
-    edgeStates, 
-    `Starting Dijkstra from '${sourceId}'. All distances initialized to ∞ except source (0)`,
+    nodeStates,
+    edgeStates,
+    `Starting Dijkstra from '${getLabel(graph, sourceId)}'. All distances initialized to ∞ except source (0)`,
     { distances: new Map(distances) }
   ));
 
@@ -325,53 +331,53 @@ export function dijkstra(
         nodeStates.set(node, 'path');
         node = previous.get(node) || null;
       }
-      
+
       for (let i = 0; i < path.length - 1; i++) {
         edgeStates.set(getEdgeKey(path[i], path[i + 1]), 'path');
         if (!graph.directed) {
           edgeStates.set(getEdgeKey(path[i + 1], path[i]), 'path');
         }
       }
-      
+
       steps.push(createStep(
-        nodeStates, 
-        edgeStates, 
-        `✅ Shortest path found! Total distance: ${distances.get(targetId)}. Path: ${path.join(' → ')}`,
+        nodeStates,
+        edgeStates,
+        `✅ Shortest path found! Total distance: ${distances.get(targetId)}. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`,
         { distances: new Map(distances) }
       ));
-      
+
       return { steps, path, found: true };
     }
 
     unvisited.delete(current);
-    
+
     if (current !== sourceId) {
       nodeStates.set(current, 'visiting');
     }
-    
+
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `Visiting '${current}' (distance: ${distances.get(current)})`,
+      nodeStates,
+      edgeStates,
+      `Visiting '${getLabel(graph, current)}' (distance: ${distances.get(current)})`,
       { distances: new Map(distances), currentNodes: [current] }
     ));
 
     // Relax edges
     for (const { neighbor, weight } of adjList.get(current) || []) {
       if (!unvisited.has(neighbor)) continue;
-      
+
       const edgeKey = getEdgeKey(current, neighbor);
       edgeStates.set(edgeKey, 'exploring');
-      
+
       const newDist = distances.get(current)! + weight;
       if (newDist < distances.get(neighbor)!) {
         distances.set(neighbor, newDist);
         previous.set(neighbor, current);
-        
+
         steps.push(createStep(
-          nodeStates, 
-          edgeStates, 
-          `Updated distance to '${neighbor}': ${newDist} (via '${current}')`,
+          nodeStates,
+          edgeStates,
+          `Updated distance to '${getLabel(graph, neighbor)}': ${newDist} (via '${getLabel(graph, current)}')`,
           { distances: new Map(distances) }
         ));
       }
@@ -398,7 +404,7 @@ export function dfs(
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
-  
+
   graph.nodes.forEach(n => nodeStates.set(n.id, 'default'));
   graph.edges.forEach(e => {
     edgeStates.set(getEdgeKey(e.source, e.target), 'default');
@@ -421,23 +427,23 @@ export function dfs(
 
   nodeStates.set(sourceId, 'source');
   nodeStates.set(targetId, 'target');
-  
-  steps.push(createStep(nodeStates, edgeStates, `Starting DFS from '${sourceId}'`));
+
+  steps.push(createStep(nodeStates, edgeStates, `Starting DFS from '${getLabel(graph, sourceId)}'`));
 
   function dfsRecursive(current: string): boolean {
     if (found) return true;
-    
+
     visited.add(current);
     path.push(current);
-    
+
     if (current !== sourceId && current !== targetId) {
       nodeStates.set(current, 'visiting');
     }
-    
+
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `Visiting '${current}'. Stack: [${path.join(', ')}]`,
+      nodeStates,
+      edgeStates,
+      `Visiting '${getLabel(graph, current)}'. Stack: [${path.map(id => getLabel(graph, id)).join(', ')}]`,
       { currentNodes: [current] }
     ));
 
@@ -450,7 +456,7 @@ export function dfs(
       if (!visited.has(neighbor)) {
         const edgeKey = getEdgeKey(current, neighbor);
         edgeStates.set(edgeKey, 'exploring');
-        
+
         if (dfsRecursive(neighbor)) {
           edgeStates.set(edgeKey, 'path');
           if (!graph.directed) {
@@ -467,9 +473,9 @@ export function dfs(
       if (current !== sourceId && current !== targetId) {
         nodeStates.set(current, 'visited');
       }
-      steps.push(createStep(nodeStates, edgeStates, `Backtracking from '${current}'`));
+      steps.push(createStep(nodeStates, edgeStates, `Backtracking from '${getLabel(graph, current)}'`));
     }
-    
+
     return false;
   }
 
@@ -480,9 +486,9 @@ export function dfs(
       nodeStates.set(nodeId, 'path');
     }
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.join(' → ')}`
+      nodeStates,
+      edgeStates,
+      `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
     ));
     return { steps, path, found: true };
   }
@@ -503,7 +509,7 @@ export function shortestPath(
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
-  
+
   graph.nodes.forEach(n => nodeStates.set(n.id, 'default'));
   graph.edges.forEach(e => {
     edgeStates.set(getEdgeKey(e.source, e.target), 'default');
@@ -530,20 +536,20 @@ export function shortestPath(
 
   nodeStates.set(sourceId, 'source');
   nodeStates.set(targetId, 'target');
-  
-  steps.push(createStep(nodeStates, edgeStates, `Starting BFS from '${sourceId}'`));
+
+  steps.push(createStep(nodeStates, edgeStates, `Starting BFS from '${getLabel(graph, sourceId)}'`));
 
   while (queue.length > 0) {
     const current = queue.shift()!;
-    
+
     if (current !== sourceId && current !== targetId) {
       nodeStates.set(current, 'visiting');
     }
-    
+
     steps.push(createStep(
-      nodeStates, 
-      edgeStates, 
-      `Visiting '${current}'. Queue: [${queue.join(', ')}]`,
+      nodeStates,
+      edgeStates,
+      `Visiting '${getLabel(graph, current)}'. Queue: [${queue.map(id => getLabel(graph, id)).join(', ')}]`,
       { currentNodes: [current] }
     ));
 
@@ -551,7 +557,7 @@ export function shortestPath(
       if (!visited.has(neighbor)) {
         visited.set(neighbor, current);
         queue.push(neighbor);
-        
+
         const edgeKey = getEdgeKey(current, neighbor);
         edgeStates.set(edgeKey, 'exploring');
 
@@ -563,7 +569,7 @@ export function shortestPath(
             path.unshift(node);
             node = visited.get(node) || null;
           }
-          
+
           for (const nodeId of path) {
             nodeStates.set(nodeId, 'path');
           }
@@ -573,13 +579,13 @@ export function shortestPath(
               edgeStates.set(getEdgeKey(path[i + 1], path[i]), 'path');
             }
           }
-          
+
           steps.push(createStep(
-            nodeStates, 
-            edgeStates, 
-            `✅ Shortest path found! Length: ${path.length - 1} edges. Path: ${path.join(' → ')}`
+            nodeStates,
+            edgeStates,
+            `✅ Shortest path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
           ));
-          
+
           return { steps, path, found: true };
         }
       }
@@ -606,7 +612,7 @@ export function pageRank(
   const steps: AlgorithmStep[] = [];
   const nodeStates = new Map<string, NodeState>();
   const edgeStates = new Map<string, EdgeState>();
-  
+
   graph.nodes.forEach(n => nodeStates.set(n.id, 'default'));
   graph.edges.forEach(e => {
     edgeStates.set(getEdgeKey(e.source, e.target), 'default');
@@ -629,19 +635,19 @@ export function pageRank(
   graph.nodes.forEach(node => pageRankValues.set(node.id, 1 / n));
 
   steps.push(createStep(
-    nodeStates, 
-    edgeStates, 
+    nodeStates,
+    edgeStates,
     `Initializing PageRank. Each node starts with value ${(1 / n).toFixed(4)}`,
     { pageRankValues: new Map(pageRankValues) }
   ));
 
   for (let iter = 0; iter < iterations; iter++) {
     const newRanks = new Map<string, number>();
-    
+
     // Calculate new ranks
     for (const node of graph.nodes) {
       let rankSum = 0;
-      
+
       // Sum contributions from incoming links
       for (const edge of graph.edges) {
         if (edge.target === node.id) {
@@ -649,9 +655,9 @@ export function pageRank(
           rankSum += (pageRankValues.get(edge.source) || 0) / sourceOutDegree;
         }
       }
-      
+
       newRanks.set(
-        node.id, 
+        node.id,
         (1 - dampingFactor) / n + dampingFactor * rankSum
       );
     }
@@ -677,12 +683,12 @@ export function pageRank(
       const topNodes = Array.from(pageRankValues.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(([id, rank]) => `${id}: ${rank.toFixed(4)}`)
+        .map(([id, rank]) => `${getLabel(graph, id)}: ${rank.toFixed(4)}`)
         .join(', ');
-      
+
       steps.push(createStep(
-        nodeStates, 
-        edgeStates, 
+        nodeStates,
+        edgeStates,
         `Iteration ${iter + 1}/${iterations}. Top nodes: ${topNodes}`,
         { pageRankValues: new Map(pageRankValues) }
       ));
@@ -691,17 +697,17 @@ export function pageRank(
 
   const sortedRanks = Array.from(pageRankValues.entries())
     .sort((a, b) => b[1] - a[1]);
-  
+
   steps.push(createStep(
-    nodeStates, 
-    edgeStates, 
-    `✅ PageRank complete! Highest: '${sortedRanks[0][0]}' (${sortedRanks[0][1].toFixed(4)})`,
+    nodeStates,
+    edgeStates,
+    `✅ PageRank complete! Highest: '${getLabel(graph, sortedRanks[0][0])}' (${sortedRanks[0][1].toFixed(4)})`,
     { pageRankValues: new Map(pageRankValues) }
   ));
 
-  return { 
-    steps, 
-    path: sortedRanks.map(([id]) => id), 
-    found: true 
+  return {
+    steps,
+    path: sortedRanks.map(([id]) => id),
+    found: true
   };
 }

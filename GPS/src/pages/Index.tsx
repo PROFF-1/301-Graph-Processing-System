@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Graph, AlgorithmType } from '@/types/graph';
 import { sampleGraphs } from '@/lib/sampleGraphs';
 import { useAlgorithmVisualizer } from '@/hooks/useAlgorithmVisualizer';
@@ -24,11 +26,22 @@ import { EditGraphDialog } from '@/components/EditGraphDialog';
 import { GraphIO } from '@/components/GraphIO';
 import { AlgorithmSettingsDialog } from '@/components/AlgorithmSettingsDialog';
 import { AlgorithmConfig } from '@/types/graph';
+import { getNextLabel } from '@/lib/labelUtils';
+import { Plus } from "lucide-react";
+
+import { NewGraphDialog } from '@/components/NewGraphDialog';
+import { useGraphStorage } from '@/hooks/useGraphStorage';
 
 const Index = () => {
+  // Storage hook
+  const { customGraphs, addGraph, updateGraph } = useGraphStorage();
+
   // Graph state
-  const [selectedGraphIndex, setSelectedGraphIndex] = useState(0);
+  const [selectedGraphId, setSelectedGraphId] = useState<string>('sample-0');
   const [graph, setGraph] = useState<Graph>(sampleGraphs[0].graph);
+
+  // Dialogs
+  const [isNewGraphOpen, setIsNewGraphOpen] = useState(false);
 
   // Progress state
   const [completedAlgorithms, setCompletedAlgorithms] = useState<string[]>(() => {
@@ -100,19 +113,32 @@ const Index = () => {
   });
 
   // Handle graph change
-  const handleGraphChange = useCallback((index: number) => {
-    setSelectedGraphIndex(index);
-    setGraph(sampleGraphs[index].graph);
+  const handleGraphChange = useCallback((id: string, type: 'sample' | 'custom') => {
+    setSelectedGraphId(id);
+    if (type === 'custom') {
+      const g = customGraphs.find(cg => cg.id === id);
+      if (g) setGraph(g.graph);
+    } else {
+      const index = parseInt(id.replace('sample-', ''));
+      setGraph(sampleGraphs[index].graph);
+    }
     setSelectedSource(null);
     setSelectedTarget(null);
-  }, []);
+  }, [customGraphs]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (selectedGraphId.startsWith('custom-')) {
+      updateGraph(selectedGraphId, graph);
+    }
+  }, [graph, selectedGraphId]); // Note: updateGraph should likely be stable or ref-based to avoid cycles, but simple dependency is okay if updater is stable.
 
   // Handle node click for source/target selection or edge creation
   const handleNodeClick = useCallback((nodeId: string) => {
     if (isEditing) {
       if (!edgeSource) {
         setEdgeSource(nodeId);
-        // We could add a toast here
+        toast.info("Select a target node to connect");
       } else {
         if (edgeSource !== nodeId) {
           // Check if edge already exists
@@ -126,7 +152,13 @@ const Index = () => {
               ...prev,
               edges: [...prev.edges, { source: edgeSource, target: nodeId, weight: 1 }]
             }));
+            toast.success("Edge created");
+          } else {
+            toast.error("Edge already exists");
           }
+        } else {
+          // Clicked same node, maybe cancel?
+          toast.info("Edge creation canceled");
         }
         setEdgeSource(null);
       }
@@ -154,19 +186,27 @@ const Index = () => {
 
   const handleBackgroundClick = useCallback((x: number, y: number) => {
     if (isEditing) {
-      const newNodeId = `n${Date.now().toString().slice(-4)}`;
+      if (edgeSource) {
+        setEdgeSource(null);
+        toast.info("Edge creation canceled");
+        return;
+      }
+
+      const newNodeId = `n${Date.now()}`;
+      const nextLabel = getNextLabel(graph.nodes);
+
       const newNode = {
         id: newNodeId,
         x,
         y,
-        label: newNodeId
+        label: nextLabel
       };
       setGraph(prev => ({
         ...prev,
         nodes: [...prev.nodes, newNode]
       }));
     }
-  }, [isEditing]);
+  }, [isEditing, graph.nodes, edgeSource]);
 
   const handleNodeDoubleClick = useCallback((nodeId: string) => {
     const node = graph.nodes.find(n => n.id === nodeId);
@@ -178,6 +218,22 @@ const Index = () => {
       });
     }
   }, [graph.nodes]);
+
+  // Create new graph handler
+  const handleCreateGraph = (name: string) => {
+    const newGraph: Graph = {
+      nodes: [],
+      edges: [],
+      directed: true
+    };
+    const newId = addGraph(name, newGraph);
+    setSelectedGraphId(newId);
+    setGraph(newGraph);
+    setSelectedSource(null);
+    setSelectedTarget(null);
+    setIsEditing(true); // Automatically enter edit mode
+    toast.success(`Created graph "${name}"`);
+  };
 
   const handleEdgeClick = useCallback((source: string, target: string) => {
     const edge = graph.edges.find(e =>
@@ -316,8 +372,9 @@ const Index = () => {
               <div className="lg:col-span-1 space-y-4">
                 <GraphIO graph={graph} onImport={(g) => { setGraph(g); setSelectedSource(null); setSelectedTarget(null); }} />
                 <GraphSelector
-                  selectedGraphIndex={selectedGraphIndex}
+                  selectedGraphId={selectedGraphId}
                   onGraphChange={handleGraphChange}
+                  customGraphs={customGraphs}
                 />
 
                 <AlgorithmSelector
@@ -349,7 +406,9 @@ const Index = () => {
                 <div className="bg-card rounded-xl border border-border p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium text-muted-foreground">
-                      {sampleGraphs[selectedGraphIndex].name}
+                      {selectedGraphId.startsWith('custom-')
+                        ? customGraphs.find(g => g.id === selectedGraphId)?.name || 'Custom Graph'
+                        : sampleGraphs[parseInt(selectedGraphId.replace('sample-', ''))]?.name}
                       <span className="ml-2 text-xs">
                         ({graph.directed ? 'Directed' : 'Undirected'})
                       </span>
@@ -436,11 +495,15 @@ const Index = () => {
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                     </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-node-target" />
-                      Click another to set as target
-                    </span>
-                    <span>•</span>
+                    <div className="flex justify-end mb-2 gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setIsNewGraphOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Graph
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} title="Algorithm Settings">
+                        <Settings2 className="h-4 w-4" />
+                      </Button>
+                    </div>    <span>•</span>
                     <span>Use controls to step through the algorithm</span>
                   </div>
 
@@ -492,6 +555,12 @@ const Index = () => {
         onClose={() => setIsSettingsOpen(false)}
         config={algoConfig}
         onSave={setAlgoConfig}
+      />
+
+      <NewGraphDialog
+        isOpen={isNewGraphOpen}
+        onClose={() => setIsNewGraphOpen(false)}
+        onCreate={handleCreateGraph}
       />
 
       {/* Footer */}

@@ -289,7 +289,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               <g
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isEditing) onNodeClick(node.id);
+                  onNodeClick(node.id);
                 }}
                 onMouseDown={(e) => {
                   if (isEditing) {
