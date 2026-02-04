@@ -241,7 +241,18 @@ export function bidirectionalBFS(
     `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
   ));
 
-  return { steps, path, found: true };
+  return {
+    steps,
+    path,
+    found: true,
+    metrics: {
+      timeComplexity: 'O(b^(d/2))',
+      spaceComplexity: 'O(b^(d/2))',
+      visitedNodes: forwardVisited.size + backwardVisited.size,
+      visitedEdges: edgeStates.size, // Approximation of explored edges
+      pathLength: path.length - 1
+    }
+  };
 }
 
 /**
@@ -346,7 +357,18 @@ export function dijkstra(
         { distances: new Map(distances) }
       ));
 
-      return { steps, path, found: true };
+      return {
+        steps,
+        path,
+        found: true,
+        metrics: {
+          timeComplexity: 'O(E + V log V)',
+          spaceComplexity: 'O(V)',
+          visitedNodes: distances.size - unvisited.size + 1,
+          visitedEdges: 0, // Should track relaxed edges
+          pathLength: distances.get(targetId)
+        }
+      };
     }
 
     unvisited.delete(current);
@@ -389,7 +411,17 @@ export function dijkstra(
   }
 
   steps.push(createStep(nodeStates, edgeStates, '❌ Target not reachable'));
-  return { steps, path: [], found: false };
+  return {
+    steps,
+    path: [],
+    found: false,
+    metrics: {
+      timeComplexity: 'O(E + V log V)',
+      spaceComplexity: 'O(V)',
+      visitedNodes: distances.size - unvisited.size,
+      visitedEdges: 0
+    }
+  };
 }
 
 /**
@@ -490,11 +522,32 @@ export function dfs(
       edgeStates,
       `✅ Path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
     ));
-    return { steps, path, found: true };
+    return {
+      steps,
+      path,
+      found: true,
+      metrics: {
+        timeComplexity: 'O(V + E)',
+        spaceComplexity: 'O(V)',
+        visitedNodes: visited.size,
+        visitedEdges: 0,
+        pathLength: path.length - 1
+      }
+    };
   }
 
   steps.push(createStep(nodeStates, edgeStates, '❌ No path exists'));
-  return { steps, path: [], found: false };
+  return {
+    steps,
+    path: [],
+    found: false,
+    metrics: {
+      timeComplexity: 'O(V + E)',
+      spaceComplexity: 'O(V)',
+      visitedNodes: visited.size,
+      visitedEdges: 0
+    }
+  };
 }
 
 /**
@@ -586,7 +639,18 @@ export function shortestPath(
             `✅ Shortest path found! Length: ${path.length - 1} edges. Path: ${path.map(id => getLabel(graph, id)).join(' → ')}`
           ));
 
-          return { steps, path, found: true };
+          return {
+            steps,
+            path,
+            found: true,
+            metrics: {
+              timeComplexity: 'O(V + E)',
+              spaceComplexity: 'O(V)',
+              visitedNodes: visited.size,
+              visitedEdges: 0,
+              pathLength: path.length - 1
+            }
+          };
         }
       }
     }
@@ -597,7 +661,17 @@ export function shortestPath(
   }
 
   steps.push(createStep(nodeStates, edgeStates, '❌ No path exists'));
-  return { steps, path: [], found: false };
+  return {
+    steps,
+    path: [],
+    found: false,
+    metrics: {
+      timeComplexity: 'O(V + E)',
+      spaceComplexity: 'O(V)',
+      visitedNodes: visited.size,
+      visitedEdges: 0
+    }
+  };
 }
 
 /**
@@ -708,6 +782,15 @@ export function pageRank(
   return {
     steps,
     path: sortedRanks.map(([id]) => id),
-    found: true
+    found: true,
+    metrics: {
+      timeComplexity: `O(k * (V + E))`,
+      spaceComplexity: 'O(V)',
+      visitedNodes: n,
+      visitedEdges: graph.edges.length
+    }
   };
 }
+
+export { pregelPageRank } from './pregel';
+export { partitionGraph } from './partitioning';

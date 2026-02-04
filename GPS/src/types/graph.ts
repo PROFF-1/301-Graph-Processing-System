@@ -5,6 +5,7 @@ export interface GraphNode {
   x: number;
   y: number;
   label: string;
+  partitionId?: number;
 }
 
 export interface GraphEdge {
@@ -19,17 +20,17 @@ export interface Graph {
   directed: boolean;
 }
 
-export type NodeState = 
+export type NodeState =
   | 'default'
   | 'source'
   | 'target'
   | 'visiting'
   | 'visited'
   | 'path'
-  | 'forward-frontier'  // Bidirectional: expanding from source
-  | 'backward-frontier'; // Bidirectional: expanding from target
+  | 'forward-frontier'
+  | 'backward-frontier';
 
-export type EdgeState = 
+export type EdgeState =
   | 'default'
   | 'exploring'
   | 'path'
@@ -44,6 +45,15 @@ export interface AlgorithmStep {
   backwardFrontier?: string[];
   pageRankValues?: Map<string, number>;
   distances?: Map<string, number>;
+  partitionStats?: Map<number, { activeNodes: number; messagesSent: number }>;
+}
+
+export interface AlgorithmMetrics {
+  timeComplexity: string;
+  spaceComplexity: string;
+  visitedNodes: number;
+  visitedEdges: number;
+  pathLength?: number;
 }
 
 export interface AlgorithmResult {
@@ -51,14 +61,16 @@ export interface AlgorithmResult {
   path: string[];
   found: boolean;
   error?: string;
+  metrics?: AlgorithmMetrics;
 }
 
-export type AlgorithmType = 
+export type AlgorithmType =
   | 'bidirectional-bfs'
   | 'dijkstra'
   | 'dfs'
   | 'shortest-path'
-  | 'pagerank';
+  | 'pagerank'
+  | 'pregel-pagerank';
 
 export interface AlgorithmConfig {
   speed: number;

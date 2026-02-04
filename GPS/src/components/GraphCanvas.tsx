@@ -22,7 +22,10 @@ interface GraphCanvasProps {
   edgeSource?: string | null;
   onNodeDoubleClick?: (id: string) => void;
   onEdgeClick?: (source: string, target: string) => void;
+  showPartitions?: boolean;
 }
+
+import { PARTITION_COLORS } from '@/lib/partitioning';
 
 const nodeColors: Record<NodeState, string> = {
   'default': 'hsl(var(--node-default))',
@@ -58,9 +61,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   edgeSource,
   onNodeDoubleClick,
   onEdgeClick,
+  showPartitions = false,
 }) => {
   const [draggingNode, setDraggingNode] = React.useState<string | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
+
+  // Large graph optimization threshold
+  const isLargeGraph = graph.nodes.length > 50;
+  const isHugeGraph = graph.nodes.length > 1000 || graph.edges.length > 2000;
 
   const getMousePos = (e: React.MouseEvent) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -116,6 +124,57 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const maxRadius = 45;
     return minRadius + (rank / maxRank) * (maxRadius - minRadius);
   };
+
+  // For huge graphs, use canvas for performance
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  React.useEffect(() => {
+    if (!isHugeGraph) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw edges
+    ctx.globalAlpha = 0.6;
+    for (const edge of graph.edges) {
+      const sourceNode = graph.nodes.find(n => n.id === edge.source);
+      const targetNode = graph.nodes.find(n => n.id === edge.target);
+      if (!sourceNode || !targetNode) continue;
+      ctx.beginPath();
+      ctx.moveTo(sourceNode.x, sourceNode.y);
+      ctx.lineTo(targetNode.x, targetNode.y);
+      ctx.strokeStyle = '#bbb';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Draw nodes
+    ctx.globalAlpha = 1.0;
+    for (const node of graph.nodes) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#1976d2';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }, [graph, isHugeGraph]);
+
+  if (isHugeGraph) {
+    return (
+      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <canvas
+          ref={canvasRef}
+          width={650}
+          height={500}
+          style={{ width: '100%', height: '100%', background: 'var(--background)', borderRadius: '0.5rem', display: 'block' }}
+        />
+        <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>
+          Huge graph mode: {graph.nodes.length} nodes, {graph.edges.length} edges
+        </div>
+      </div>
+    );
+  }
 
   return (
     <svg
@@ -312,7 +371,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   cx={node.x}
                   cy={node.y}
                   r={radius}
-                  fill={color}
+                  fill={showPartitions && node.partitionId !== undefined ? PARTITION_COLORS[node.partitionId! % PARTITION_COLORS.length] : color}
                   stroke={state === 'visiting' ? 'hsl(var(--foreground))' : 'transparent'}
                   strokeWidth={3}
                   filter={isGlowing ? `url(#glow-${state === 'source' ? 'source' : state === 'target' ? 'target' : 'path'})` : undefined}

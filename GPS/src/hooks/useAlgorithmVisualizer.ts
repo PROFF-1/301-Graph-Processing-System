@@ -12,7 +12,8 @@ import {
   dijkstra,
   dfs,
   shortestPath,
-  pageRank
+  pageRank,
+  pregelPageRank
 } from '@/lib/graphAlgorithms';
 
 interface UseAlgorithmVisualizerProps {
@@ -20,7 +21,7 @@ interface UseAlgorithmVisualizerProps {
   source: string | null;
   target: string | null;
   algorithm: AlgorithmType;
-  config?: { maxIterations?: number; dampingFactor?: number };
+  config?: { maxIterations?: number; dampingFactor?: number; numPartitions?: number };
 }
 
 export function useAlgorithmVisualizer({
@@ -84,6 +85,15 @@ export function useAlgorithmVisualizer({
 
       case 'pagerank':
         algorithmResult = pageRank(graph, config?.maxIterations || 20, config?.dampingFactor || 0.85);
+        break;
+
+      case 'pregel-pagerank':
+        algorithmResult = pregelPageRank(
+          graph,
+          config?.numPartitions || 4,
+          config?.maxIterations || 15,
+          config?.dampingFactor || 0.85
+        );
         break;
 
       default:

@@ -27,10 +27,13 @@ import { GraphIO } from '@/components/GraphIO';
 import { AlgorithmSettingsDialog } from '@/components/AlgorithmSettingsDialog';
 import { AlgorithmConfig } from '@/types/graph';
 import { getNextLabel } from '@/lib/labelUtils';
-import { Plus } from "lucide-react";
+import { Plus, Server, Layers } from "lucide-react";
+import { MetricsPanel } from '@/components/MetricsPanel';
+import { partitionGraph } from '@/lib/partitioning';
 
 import { NewGraphDialog } from '@/components/NewGraphDialog';
 import { useGraphStorage } from '@/hooks/useGraphStorage';
+import { pregelPageRank } from '@/lib/pregel';
 
 const Index = () => {
   // Storage hook
@@ -62,6 +65,11 @@ const Index = () => {
   const [isComparisonMode, setIsComparisonMode] = useState(false);
   const [selectedAlgorithm2, setSelectedAlgorithm2] = useState<AlgorithmType>('dfs');
 
+  // Distributed Mode state
+  const [isDistributedMode, setIsDistributedMode] = useState(false);
+  const [numPartitions, setNumPartitions] = useState(4);
+  const [partitionStrategy, setPartitionStrategy] = useState<'hash' | 'range'>('hash');
+
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [edgeSource, setEdgeSource] = useState<string | null>(null);
@@ -86,13 +94,14 @@ const Index = () => {
     reset,
     setSpeed,
     steps, // <-- Add this line if your hook returns steps
-    jumpToStep
+    jumpToStep,
+    result
   } = useAlgorithmVisualizer({
     graph,
     source: selectedSource,
     target: selectedTarget,
-    algorithm: selectedAlgorithm,
-    config: algoConfig,
+    algorithm: isDistributedMode && selectedAlgorithm === 'pagerank' ? 'pregel-pagerank' : selectedAlgorithm,
+    config: { ...algoConfig, numPartitions },
   });
 
   useEffect(() => {
@@ -122,9 +131,23 @@ const Index = () => {
       const index = parseInt(id.replace('sample-', ''));
       setGraph(sampleGraphs[index].graph);
     }
+    // Re-partition if needed
+    if (isDistributedMode) {
+      // We need to defer this slightly or wrap it, but for now simple re-set is ok
+      // In a real app we'd use useEffect for this sync, but let's just trigger it manually if needed
+      // Or rely on the user toggling mode.
+      // Actually, let's just let the effect handle it or a separate function.
+    }
     setSelectedSource(null);
     setSelectedTarget(null);
-  }, [customGraphs]);
+  }, [customGraphs, isDistributedMode]);
+
+  // Handle Partitioning
+  useEffect(() => {
+    if (isDistributedMode) {
+      setGraph(prev => partitionGraph(prev, partitionStrategy, numPartitions));
+    }
+  }, [isDistributedMode, partitionStrategy, numPartitions]);
 
   // Auto-save effect
   useEffect(() => {
@@ -308,12 +331,19 @@ const Index = () => {
   }, []);
 
   const handleRunAndPlay = () => {
+    if (isDistributedMode && selectedAlgorithm === 'pagerank') {
+      // Switch to pregel-pagerank internally or just run pregel
+      // The visualizer hook should handle 'pregel-pagerank' if we pass it
+      // Or we can override the algorithm type passed to hook
+      // Let's modify the hook call or standard algo state?
+      // Simpler: Just set algorithm to 'pregel-pagerank' when in distributed mode + pagerank
+    }
     runAlgorithm();
     if (isComparisonMode) {
       viz2.runAlgorithm();
       setTimeout(() => viz2.play(), 0);
     }
-    setTimeout(() => play(), 0); // Ensure play runs after steps are set
+    setTimeout(() => play(), 0);
   };
 
   // Sync controls for comparison
@@ -370,7 +400,16 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* Left Sidebar - Controls */}
               <div className="lg:col-span-1 space-y-4">
-                <GraphIO graph={graph} onImport={(g) => { setGraph(g); setSelectedSource(null); setSelectedTarget(null); }} />
+                <GraphIO
+                  graph={graph}
+                  onImport={(g, name) => {
+                    const newId = addGraph(name, g);
+                    setSelectedGraphId(newId);
+                    setGraph(g);
+                    setSelectedSource(null);
+                    setSelectedTarget(null);
+                  }}
+                />
                 <GraphSelector
                   selectedGraphId={selectedGraphId}
                   onGraphChange={handleGraphChange}
@@ -419,15 +458,55 @@ const Index = () => {
                         <Label htmlFor="edit-mode">Edit Mode</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Switch id="compare-mode" checked={isComparisonMode} onCheckedChange={(val) => { setIsComparisonMode(val); if (val) setIsEditing(false); }} />
+                        <Switch id="compare-mode" checked={isComparisonMode} onCheckedChange={(val) => { setIsComparisonMode(val); if (val) { setIsEditing(false); setIsDistributedMode(false); } }} />
                         <Label htmlFor="compare-mode">Compare</Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch id="dist-mode" checked={isDistributedMode} onCheckedChange={(val) => { setIsDistributedMode(val); if (val) { setIsEditing(false); setIsComparisonMode(false); setSelectedAlgorithm('pagerank'); } }} />
+                        <Label htmlFor="dist-mode">Distributed</Label>
+                      </div>
                       <Legend
-                        showPageRank={selectedAlgorithm === 'pagerank' || (isComparisonMode && selectedAlgorithm2 === 'pagerank')}
-                        showBidirectional={selectedAlgorithm === 'bidirectional-bfs' || (isComparisonMode && selectedAlgorithm2 === 'bidirectional-bfs')}
+                        showPageRank={selectedAlgorithm === 'pagerank' || selectedAlgorithm === 'pregel-pagerank'}
+                        showBidirectional={selectedAlgorithm === 'bidirectional-bfs'}
                       />
                     </div>
                   </div>
+
+                  {isDistributedMode && (
+                    <div className="mb-4 p-3 border border-border rounded-lg bg-secondary/20 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Server className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium">Cluster Config:</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Label>Partitions:</Label>
+                        <select
+                          className="bg-background border border-border rounded p-1"
+                          value={numPartitions}
+                          onChange={(e) => setNumPartitions(Number(e.target.value))}
+                        >
+                          <option value="2">2 Workers</option>
+                          <option value="4">4 Workers</option>
+                          <option value="8">8 Workers</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Label>Strategy:</Label>
+                        <select
+                          className="bg-background border border-border rounded p-1"
+                          value={partitionStrategy}
+                          onChange={(e) => setPartitionStrategy(e.target.value as any)}
+                        >
+                          <option value="hash">Hash Partitioning</option>
+                          <option value="range">Range Partitioning</option>
+                        </select>
+                      </div>
+                      <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+                        <Layers className="w-3 h-3" />
+                        Pregel (BSP) Model Active
+                      </div>
+                    </div>
+                  )}
 
                   {isComparisonMode && (
                     <div className="mb-4 p-2 border border-border rounded-lg bg-secondary/30">
@@ -462,6 +541,7 @@ const Index = () => {
                           onBackgroundClick={handleBackgroundClick}
                           onNodeDoubleClick={handleNodeDoubleClick}
                           onEdgeClick={handleEdgeClick}
+                          showPartitions={isDistributedMode}
                         />
                       </div>
                     </div>
@@ -508,22 +588,68 @@ const Index = () => {
                   </div>
 
                   {/* Algorithm Log Section - moved here */}
-                  <div className="mt-6 p-4 bg-card border border-border rounded-xl shadow text-base text-foreground">
-                    <h2 className="text-lg font-bold mb-2">Algorithm Log</h2>
-                    <ol className="list-decimal ml-6 mt-3 space-y-1">
-                      {(steps ?? []).map((step, i) => (
-                        <li
-                          key={i}
-                          className={`cursor-pointer hover:bg-muted/50 p-1 rounded ${i === currentStep ? 'font-bold text-primary' : ''}`}
-                          onClick={() => jumpToStep(i)}
-                        >
-                          {step.message}
-                        </li>
-                      ))}
-                    </ol>
+                  {/* Metrics and Logs Grid */}
+                  <div className={`grid gap-6 ${isComparisonMode ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
+
+                    {/* Algorithm 1 Stats */}
+                    <div className={`${isComparisonMode ? 'col-span-1' : 'col-span-1'}`}>
+                      <div className="space-y-4">
+                        <MetricsPanel result={useAlgorithmVisualizer({ graph, source: selectedSource, target: selectedTarget, algorithm: selectedAlgorithm, config: algoConfig }).result} algorithmName={selectedAlgorithm} />
+
+                        <div className="p-4 bg-card border border-border rounded-xl shadow text-base text-foreground max-h-[400px] overflow-y-auto">
+                          <h2 className="text-lg font-bold mb-2 sticky top-0 bg-card z-10">Log: {selectedAlgorithm}</h2>
+                          <ol className="list-decimal ml-6 mt-3 space-y-1">
+                            {(steps ?? []).map((step, i) => (
+                              <li
+                                key={i}
+                                className={`cursor-pointer hover:bg-muted/50 p-1 rounded ${i === currentStep ? 'font-bold text-primary' : ''}`}
+                                onClick={() => jumpToStep(i)}
+                              >
+                                {step.message}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Algorithm 2 Stats (Comparison Mode Only) */}
+                    {isComparisonMode && (
+                      <div className="col-span-1">
+                        <div className="space-y-4">
+                          <MetricsPanel result={viz2.result} algorithmName={selectedAlgorithm2} />
+
+                          <div className="p-4 bg-card border border-border rounded-xl shadow text-base text-foreground max-h-[400px] overflow-y-auto">
+                            <h2 className="text-lg font-bold mb-2 sticky top-0 bg-card z-10">Log: {selectedAlgorithm2}</h2>
+                            <ol className="list-decimal ml-6 mt-3 space-y-1">
+                              {(viz2.steps ?? []).map((step, i) => (
+                                <li
+                                  key={i}
+                                  className={`cursor-pointer hover:bg-muted/50 p-1 rounded ${i === viz2.currentStep ? 'font-bold text-primary' : ''}`}
+                                  onClick={() => viz2.jumpToStep(i)}
+                                >
+                                  {step.message}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Explanations (Full width if not comparison, or bottom) */}
+                    {!isComparisonMode && (
+                      <div className="col-span-1 md:col-span-2">
+                        <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
+                      </div>
+                    )}
                   </div>
-                  {/* Algorithm Explanations Section */}
-                  <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
+
+                  {isComparisonMode && (
+                    <div className="mt-8">
+                      <AlgorithmExplanations selectedAlgorithm={selectedAlgorithm} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
