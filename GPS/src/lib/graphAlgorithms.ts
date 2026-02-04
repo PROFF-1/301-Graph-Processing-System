@@ -413,19 +413,20 @@ export function dijkstra(
   }
 
   steps.push(createStep(nodeStates, edgeStates, '❌ Target not reachable'));
-      const endTime = performance.now();
-      return {
-        steps,
-        path,
-        found: true,
-        metrics: {
-          timeComplexity: `${(endTime - startTime).toFixed(2)} ms`,
-          spaceComplexity: `${(Object.keys(distances).length + Object.keys(previous).length)} map entries`,
-          visitedNodes: distances.size - unvisited.size + 1,
-          visitedEdges: relaxedEdges,
-          pathLength: distances.get(targetId)
-        }
-      };
+  const endTime = performance.now();
+  return {
+    steps,
+    path: [],
+    found: false,
+    metrics: {
+      timeComplexity: `${(endTime - startTime).toFixed(2)} ms`,
+      spaceComplexity: `${(Object.keys(distances).length + Object.keys(previous).length)} map entries`,
+      visitedNodes: distances.size - unvisited.size + 1,
+      visitedEdges: relaxedEdges,
+      pathLength: distances.get(targetId)
+    }
+  };
+} // <-- Add this closing brace!
 
 /**
  * DEPTH-FIRST SEARCH (DFS)
