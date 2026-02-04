@@ -59,3 +59,10 @@ export type AlgorithmType =
   | 'dfs'
   | 'shortest-path'
   | 'pagerank';
+
+export interface AlgorithmConfig {
+  speed: number;
+  dampingFactor?: number;
+  maxIterations?: number;
+}
+

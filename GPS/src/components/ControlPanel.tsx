@@ -2,11 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  SkipBack, 
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
   RotateCcw,
   Zap
 } from 'lucide-react';
@@ -55,10 +55,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick={onReset}
             disabled={totalSteps === 0}
             className="h-9 w-9"
+            aria-label="Reset Visualization"
           >
             <RotateCcw className="w-4 h-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="icon"
@@ -68,21 +69,17 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           >
             <SkipBack className="w-4 h-4" />
           </Button>
-          
+
           <Button
-            variant="default"
+            variant="outline"
             size="icon"
             onClick={isPlaying ? onPause : onPlay}
-            disabled={totalSteps === 0 || currentStep >= totalSteps - 1}
-            className="h-10 w-10 bg-gradient-primary hover:opacity-90"
+            disabled={totalSteps === 0}
+            className="h-9 w-9"
           >
-            {isPlaying ? (
-              <Pause className="w-5 h-5" />
-            ) : (
-              <Play className="w-5 h-5 ml-0.5" />
-            )}
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </Button>
-          
+
           <Button
             variant="outline"
             size="icon"
@@ -101,12 +98,17 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <span>of {Math.max(totalSteps, 1)}</span>
           </div>
           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-primary transition-all duration-200"
-              style={{ 
-                width: totalSteps > 0 ? `${((currentStep + 1) / totalSteps) * 100}%` : '0%' 
+              style={{
+                width: totalSteps > 0 ? `${((currentStep + 1) / totalSteps) * 100}%` : '0%'
               }}
             />
+          </div>
+          {/* Performance Metrics */}
+          <div className="flex justify-between text-xs font-mono pt-1">
+            <span>Speed: {speed}ms</span>
+            {/* We can pass visited count as a prop or specific metric */}
           </div>
         </div>
 

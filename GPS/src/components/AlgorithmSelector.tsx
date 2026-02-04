@@ -2,20 +2,23 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  ArrowRightLeft, 
-  Route, 
+import {
+  ArrowRightLeft,
+  Route,
   GitBranch,
   Gauge,
   Star,
-  Play
+  Play,
+  Settings2,
+  Info,
+  Loader2
 } from 'lucide-react';
 import { AlgorithmType } from '@/types/graph';
 
@@ -26,57 +29,58 @@ interface AlgorithmSelectorProps {
   selectedSource: string | null;
   selectedTarget: string | null;
   isRunning: boolean;
+  hideRunButton?: boolean;
 }
 
-const algorithms: { 
-  id: AlgorithmType; 
-  name: string; 
+const algorithms: {
+  id: AlgorithmType;
+  name: string;
   icon: React.ReactNode;
   description: string;
   complexity: string;
   requiresTarget: boolean;
 }[] = [
-  {
-    id: 'bidirectional-bfs',
-    name: 'Bidirectional BFS',
-    icon: <ArrowRightLeft className="w-4 h-4" />,
-    description: 'Search from both ends, meet in middle',
-    complexity: 'O(b^(d/2))',
-    requiresTarget: true,
-  },
-  {
-    id: 'dijkstra',
-    name: "Dijkstra's Algorithm",
-    icon: <Gauge className="w-4 h-4" />,
-    description: 'Shortest path with weighted edges',
-    complexity: 'O((V+E) log V)',
-    requiresTarget: true,
-  },
-  {
-    id: 'dfs',
-    name: 'Depth-First Search',
-    icon: <GitBranch className="w-4 h-4" />,
-    description: 'Explore deep before backtracking',
-    complexity: 'O(V + E)',
-    requiresTarget: true,
-  },
-  {
-    id: 'shortest-path',
-    name: 'BFS Shortest Path',
-    icon: <Route className="w-4 h-4" />,
-    description: 'Standard BFS for unweighted graphs',
-    complexity: 'O(V + E)',
-    requiresTarget: true,
-  },
-  {
-    id: 'pagerank',
-    name: 'PageRank',
-    icon: <Star className="w-4 h-4" />,
-    description: 'Rank nodes by importance',
-    complexity: 'O(E × iter)',
-    requiresTarget: false,
-  },
-];
+    {
+      id: 'bidirectional-bfs',
+      name: 'Bidirectional BFS',
+      icon: <ArrowRightLeft className="w-4 h-4" />,
+      description: 'Search from both ends, meet in middle',
+      complexity: 'O(b^(d/2))',
+      requiresTarget: true,
+    },
+    {
+      id: 'dijkstra',
+      name: "Dijkstra's Algorithm",
+      icon: <Gauge className="w-4 h-4" />,
+      description: 'Shortest path with weighted edges',
+      complexity: 'O((V+E) log V)',
+      requiresTarget: true,
+    },
+    {
+      id: 'dfs',
+      name: 'Depth-First Search',
+      icon: <GitBranch className="w-4 h-4" />,
+      description: 'Explore deep before backtracking',
+      complexity: 'O(V + E)',
+      requiresTarget: true,
+    },
+    {
+      id: 'shortest-path',
+      name: 'BFS Shortest Path',
+      icon: <Route className="w-4 h-4" />,
+      description: 'Standard BFS for unweighted graphs',
+      complexity: 'O(V + E)',
+      requiresTarget: true,
+    },
+    {
+      id: 'pagerank',
+      name: 'PageRank',
+      icon: <Star className="w-4 h-4" />,
+      description: 'Rank nodes by importance',
+      complexity: 'O(E × iter)',
+      requiresTarget: false,
+    },
+  ];
 
 export const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
   selectedAlgorithm,
@@ -85,10 +89,11 @@ export const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
   selectedSource,
   selectedTarget,
   isRunning,
+  hideRunButton = false
 }) => {
   const currentAlgo = algorithms.find(a => a.id === selectedAlgorithm);
-  const canRun = currentAlgo?.requiresTarget 
-    ? selectedSource && selectedTarget 
+  const canRun = currentAlgo?.requiresTarget
+    ? selectedSource && selectedTarget
     : selectedSource || !currentAlgo?.requiresTarget;
 
   return (
@@ -97,8 +102,8 @@ export const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
         <CardTitle className="text-sm font-medium">Algorithm</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Select 
-          value={selectedAlgorithm} 
+        <Select
+          value={selectedAlgorithm}
           onValueChange={(v) => onAlgorithmChange(v as AlgorithmType)}
         >
           <SelectTrigger className="bg-secondary border-border">
@@ -130,18 +135,18 @@ export const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Source:</span>
-            <Badge 
+            <Badge
               variant={selectedSource ? 'default' : 'secondary'}
               className={selectedSource ? 'bg-node-source text-primary-foreground' : ''}
             >
               {selectedSource || 'Click a node'}
             </Badge>
           </div>
-          
+
           {currentAlgo?.requiresTarget && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Target:</span>
-              <Badge 
+              <Badge
                 variant={selectedTarget ? 'default' : 'secondary'}
                 className={selectedTarget ? 'bg-node-target text-foreground' : ''}
               >
@@ -151,14 +156,26 @@ export const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
           )}
         </div>
 
-        <Button
-          onClick={onRun}
-          disabled={!canRun || isRunning}
-          className="w-full bg-gradient-primary hover:opacity-90"
-        >
-          <Play className="w-4 h-4 mr-2" />
-          {isRunning ? 'Running...' : 'Run Algorithm'}
-        </Button>
+        {!hideRunButton && (
+          <Button
+            className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+            size="lg"
+            onClick={onRun}
+            disabled={isRunning || (!selectedSource || (currentAlgo?.requiresTarget && !selectedTarget))}
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Run Visualization
+              </>
+            )}
+          </Button>
+        )}
 
         {!canRun && currentAlgo?.requiresTarget && (
           <p className="text-xs text-muted-foreground text-center">

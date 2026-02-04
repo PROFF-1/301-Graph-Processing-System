@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Graph, 
-  AlgorithmType, 
-  AlgorithmStep, 
-  AlgorithmResult, 
-  NodeState, 
-  EdgeState 
+import {
+  Graph,
+  AlgorithmType,
+  AlgorithmStep,
+  AlgorithmResult,
+  NodeState,
+  EdgeState
 } from '@/types/graph';
-import { 
-  bidirectionalBFS, 
-  dijkstra, 
-  dfs, 
-  shortestPath, 
-  pageRank 
+import {
+  bidirectionalBFS,
+  dijkstra,
+  dfs,
+  shortestPath,
+  pageRank
 } from '@/lib/graphAlgorithms';
 
 interface UseAlgorithmVisualizerProps {
@@ -20,6 +20,7 @@ interface UseAlgorithmVisualizerProps {
   source: string | null;
   target: string | null;
   algorithm: AlgorithmType;
+  config?: { maxIterations?: number; dampingFactor?: number };
 }
 
 export function useAlgorithmVisualizer({
@@ -27,13 +28,14 @@ export function useAlgorithmVisualizer({
   source,
   target,
   algorithm,
+  config,
 }: UseAlgorithmVisualizerProps) {
   const [steps, setSteps] = useState<AlgorithmStep[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
   const [result, setResult] = useState<AlgorithmResult | null>(null);
-  
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get current visualization state
@@ -55,7 +57,7 @@ export function useAlgorithmVisualizer({
           algorithmResult = bidirectionalBFS(graph, source, target);
         }
         break;
-      
+
       case 'dijkstra':
         if (!source || !target) {
           algorithmResult = { steps: [], path: [], found: false, error: 'Select source and target' };
@@ -63,7 +65,7 @@ export function useAlgorithmVisualizer({
           algorithmResult = dijkstra(graph, source, target);
         }
         break;
-      
+
       case 'dfs':
         if (!source || !target) {
           algorithmResult = { steps: [], path: [], found: false, error: 'Select source and target' };
@@ -71,7 +73,7 @@ export function useAlgorithmVisualizer({
           algorithmResult = dfs(graph, source, target);
         }
         break;
-      
+
       case 'shortest-path':
         if (!source || !target) {
           algorithmResult = { steps: [], path: [], found: false, error: 'Select source and target' };
@@ -79,11 +81,11 @@ export function useAlgorithmVisualizer({
           algorithmResult = shortestPath(graph, source, target);
         }
         break;
-      
+
       case 'pagerank':
-        algorithmResult = pageRank(graph, 20, 0.85);
+        algorithmResult = pageRank(graph, config?.maxIterations || 20, config?.dampingFactor || 0.85);
         break;
-      
+
       default:
         algorithmResult = { steps: [], path: [], found: false, error: 'Unknown algorithm' };
     }
@@ -92,7 +94,7 @@ export function useAlgorithmVisualizer({
     setSteps(algorithmResult.steps);
     setCurrentStep(0);
     setIsPlaying(false);
-  }, [graph, source, target, algorithm]);
+  }, [graph, source, target, algorithm, config]);
 
   // Playback controls
   const play = useCallback(() => {
@@ -157,7 +159,7 @@ export function useAlgorithmVisualizer({
     speed,
     result,
     currentStepData,
-    
+
     // Actions
     runAlgorithm,
     play,
@@ -166,5 +168,11 @@ export function useAlgorithmVisualizer({
     stepBackward,
     reset,
     setSpeed,
+    jumpToStep: (step: number) => {
+      if (step >= 0 && step < steps.length) {
+        setCurrentStep(step);
+        setIsPlaying(false);
+      }
+    },
   };
 }
